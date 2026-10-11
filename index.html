@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 font-sans select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Cyberpunk & Beyond</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@400;600;800&display=swap');
+        
+        .font-pixel { font-family: 'Press Start 2P', monospace; }
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+        
+        /* Custom Arcade Effects */
+        .arcade-shadow {
+            text-shadow: 3px 3px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000;
+        }
+        .neon-glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.6), inset 0 0 10px rgba(6, 182, 212, 0.4);
+        }
+        .neon-glow-pink {
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.6), inset 0 0 10px rgba(236, 72, 153, 0.4);
+        }
+        .crt-overlay::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 20;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden font-outfit crt-overlay bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950">
+
+    <div class="relative w-full max-w-lg h-full max-h-[850px] flex flex-col bg-slate-900 border-2 sm:border-4 border-cyan-500/50 rounded-2xl shadow-2xl overflow-hidden neon-glow-cyan">
+        
+        <!-- Top HUD Header -->
+        <header class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-3 bg-slate-950/70 backdrop-blur-md border-b border-cyan-500/20">
+            <div class="flex items-center space-x-2">
+                <span class="text-amber-400 font-pixel text-xs sm:text-sm"><i class="fa-solid font-bold fa-coins"></i> <span id="hud-coins">0</span></span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-center">
+                    <span class="text-slate-400 text-[10px] uppercase tracking-wider block font-pixel">Score</span>
+                    <span id="hud-score" class="text-xl sm:text-2xl font-pixel text-cyan-400 arcade-shadow">0</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button id="btn-sound" class="p-2 rounded-lg bg-slate-800 text-cyan-400 hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-volume-high text-sm sm:text-base"></i>
+                </button>
+                <button id="btn-pause" class="p-2 rounded-lg bg-slate-800 text-amber-400 hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-pause text-sm sm:text-base"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Active Power-up Status Indicators -->
+        <div id="powerup-bar" class="absolute top-16 left-3 z-10 flex flex-col gap-1 pointer-events-none"></div>
+
+        <!-- Canvas Container -->
+        <div class="relative flex-1 w-full h-full bg-slate-950">
+            <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+            
+            <!-- Floating Boss Health Bar (Hidden by default) -->
+            <div id="boss-hud" class="absolute top-16 left-1/2 -translate-x-1/2 w-3/4 bg-slate-950/80 p-2 rounded-xl border border-red-500/50 flex flex-col items-center gap-1 transition-all duration-300 opacity-0 pointer-events-none z-10">
+                <div class="flex justify-between w-full text-xs font-pixel text-red-400">
+                    <span><i class="fa-solid fa-skull"></i> CYBER-MECH BOSS</span>
+                    <span id="boss-hp-text">100%</span>
+                </div>
+                <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden border border-red-900">
+                    <div id="boss-hp-fill" class="bg-gradient-to-r from-red-600 to-pink-500 h-full w-full transition-all duration-150"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OVERLAY: Start / Home Screen -->
+        <div id="screen-start" class="absolute inset-0 z-30 flex flex-col items-center justify-between p-6 bg-slate-950/85 backdrop-blur-md transition-all duration-300">
+            <div class="mt-8 text-center">
+                <div class="inline-block px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-cyan-400 text-xs font-pixel mb-2 animate-pulse">
+                    <i class="fa-solid fa-bolt"></i> NEXT-GEN FLAPPY
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-pixel text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-500 to-amber-300 arcade-shadow leading-relaxed">
+                    FLAPPY<br/>CYBER
+                </h1>
+                <p class="text-slate-400 text-xs mt-2">Dodge lasers, fight bosses, unlock skins & warp through portals!</p>
+				<a href="/flappy_ai_lab.html">flappy ia</a>
+            </div>
+            <!-- Character Preview Card -->
+            <div class="w-full bg-slate-900/80 p-4 rounded-xl border border-slate-700/60 flex items-center justify-between shadow-lg">
+                <div class="flex items-center space-x-3">
+                    <div id="selected-skin-preview" class="w-12 h-12 rounded-lg bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-2xl">
+                        🐥
+                    </div>
+                    <div>
+                        <div id="selected-skin-name" class="font-pixel text-xs text-cyan-300">Classic Flapper</div>
+                        <div id="selected-skin-perk" class="text-[11px] text-slate-400">Standard balanced flapper</div>
+                    </div>
+                </div>
+                <button id="btn-open-shop" class="px-3 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg font-pixel text-[10px] hover:brightness-110 active:scale-95 transition shadow-lg">
+                    SKINS
+                </button>
+            </div>
+
+            <div class="w-full flex flex-col gap-3 my-auto">
+                <button id="btn-play" class="w-full py-4 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 text-slate-950 font-pixel text-base rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition transform flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i> START GAME
+                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="btn-open-achievements" class="py-2.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg font-pixel text-[10px] hover:bg-slate-700 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-trophy text-amber-400"></i> BADGES
+                    </button>
+                    <button id="btn-open-stats" class="py-2.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg font-pixel text-[10px] hover:bg-slate-700 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-chart-line text-cyan-400"></i> STATS
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Controls Hint -->
+            <div class="text-slate-500 text-[11px] text-center font-outfit">
+                Press <span class="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 text-slate-300">Space</span>, <span class="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 text-slate-300">Click</span> or <span class="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 text-slate-300">Tap</span> to Jump
+            </div>
+        </div>
+
+        <!-- OVERLAY: Game Over Screen -->
+        <div id="screen-gameover" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md">
+            <div class="w-full max-w-xs bg-slate-900 border-2 border-red-500/40 rounded-2xl p-5 flex flex-col items-center text-center shadow-2xl relative">
+                <div class="absolute -top-6 px-4 py-1 bg-red-500 text-slate-950 font-pixel text-xs rounded-full shadow-lg border border-red-300 uppercase tracking-wider">
+                    CRASHED!
+                </div>
+
+                <div class="my-4 text-4xl">💥</div>
+
+                <div class="w-full space-y-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-sm my-2">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span class="text-slate-400 font-pixel text-[10px]">SCORE</span>
+                        <span id="go-score" class="text-xl font-pixel text-cyan-400">0</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span class="text-slate-400 font-pixel text-[10px]">BEST</span>
+                        <span id="go-high-score" class="text-xl font-pixel text-amber-400">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400 font-pixel text-[10px]">COINS GAINED</span>
+                        <span id="go-coins" class="text-base font-pixel text-amber-300">+0</span>
+                    </div>
+                </div>
+
+                <div class="w-full flex flex-col gap-2 mt-2">
+                    <button id="btn-restart" class="w-full py-3 bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-pixel text-xs rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i> PLAY AGAIN
+                    </button>
+                    <button id="btn-home" class="w-full py-2.5 bg-slate-800 text-slate-300 font-pixel text-[10px] rounded-xl hover:bg-slate-700 transition">
+                        MAIN MENU
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Skins / Shop Modal -->
+        <div id="modal-shop" class="hidden absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-md p-4 flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h2 class="font-pixel text-sm text-pink-400 flex items-center gap-2">
+                    <i class="fa-solid fa-store"></i> CHARACTER SHOP
+                </h2>
+                <button id="btn-close-shop" class="text-slate-400 hover:text-white text-lg px-2">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Skins List -->
+            <div id="shop-skins-list" class="flex-1 overflow-y-auto py-3 space-y-2 pr-1 my-2">
+                <!-- Injected dynamically via JavaScript -->
+            </div>
+        </div>
+
+        <!-- MODAL: Achievements Modal -->
+        <div id="modal-achievements" class="hidden absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-md p-4 flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h2 class="font-pixel text-sm text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-trophy"></i> ACHIEVEMENTS
+                </h2>
+                <button id="btn-close-achievements" class="text-slate-400 hover:text-white text-lg px-2">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="achievements-list" class="flex-1 overflow-y-auto py-3 space-y-2 pr-1 my-2">
+                <!-- Injected dynamically via JavaScript -->
+            </div>
+        </div>
+
+        <!-- MODAL: Stats Modal -->
+        <div id="modal-stats" class="hidden absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-md p-4 flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h2 class="font-pixel text-sm text-cyan-400 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie"></i> PLAYER STATS
+                </h2>
+                <button id="btn-close-stats" class="text-slate-400 hover:text-white text-lg px-2">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto py-4 space-y-3 font-outfit">
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">High Score</span>
+                    <span id="stat-highscore" class="font-pixel text-amber-400 text-sm">0</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Total Games Played</span>
+                    <span id="stat-games" class="font-pixel text-cyan-400 text-sm">0</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Total Pipes Passed</span>
+                    <span id="stat-pipes" class="font-pixel text-emerald-400 text-sm">0</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Total Coins Collected</span>
+                    <span id="stat-coins" class="font-pixel text-amber-300 text-sm">0</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Bosses Defeated</span>
+                    <span id="stat-bosses" class="font-pixel text-red-400 text-sm">0</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* Retro Web Audio API Sound Generator */
+        class SoundSystem {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playCoin() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, this.ctx.currentTime); // B5
+                osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08); // E6
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playPowerup() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(600, now + 0.1);
+                osc.frequency.linearRampToValueAtTime(900, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.3);
+            }
+
+            playHit() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.linearRampToValueAtTime(40, now + 0.2);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.2);
+            }
+
+            playLaser() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.15);
+            }
+        }
+
+        const audio = new SoundSystem();
+    </script>
+
+    <script>
+        /* Character Skins Database */
+        const SKINS = [
+            { id: 'classic', name: 'Classic Bird', icon: '🐥', color: '#facc15', perk: 'Standard & balanced', cost: 0 },
+            { id: 'cyber', name: 'Cyber Neon', icon: '🤖', color: '#06b6d4', perk: '+15% coin magnet range', cost: 50 },
+            { id: 'phoenix', name: 'Fire Phoenix', icon: '🔥', color: '#f97316', perk: 'Slightly lower gravity', cost: 120 },
+            { id: 'ninja', name: 'Shadow Ninja', icon: '🥷', color: '#a855f7', perk: 'Smaller hit box size', cost: 200 },
+            { id: 'golden', name: 'Gold Emperor', icon: '👑', color: '#eab308', perk: '2x Coins per pickup', cost: 350 }
+        ];
+
+        /* Achievements Data */
+        const ACHIEVEMENTS = [
+            { id: 'first_flight', name: 'First Takeoff', desc: 'Reach a score of 5', target: 5, icon: '🐣' },
+            { id: 'pro_flapper', name: 'Pro Aviator', desc: 'Reach a score of 25', target: 25, icon: '🛩️' },
+            { id: 'master', name: 'Cyber Legend', desc: 'Reach a score of 50', target: 50, icon: '⚡' },
+            { id: 'coin_collector', name: 'Treasure Hunter', desc: 'Collect 50 coins in total', target: 50, icon: '💰', type: 'coins' },
+            { id: 'boss_slayer', name: 'Boss Destroyer', desc: 'Defeat the Mech Boss', target: 1, icon: '👾', type: 'boss' }
+        ];
+
+        /* Persistent User Data */
+        let userData = {
+            coins: 0,
+            highScore: 0,
+            selectedSkin: 'classic',
+            unlockedSkins: ['classic'],
+            unlockedAchievements: [],
+            stats: {
+                gamesPlayed: 0,
+                pipesPassed: 0,
+                totalCoins: 0,
+                bossesDefeated: 0
+            }
+        };
+
+        function loadUserData() {
+            try {
+                const saved = localStorage.getItem('flappy_cyber_data');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    userData = { ...userData, ...parsed };
+                }
+            } catch(e) {
+                console.error("Could not load user data", e);
+            }
+            updateHUDData();
+        }
+
+        function saveUserData() {
+            try {
+                localStorage.setItem('flappy_cyber_data', JSON.stringify(userData));
+            } catch(e) {
+                console.error("Could not save user data", e);
+            }
+        }
+
+        function updateHUDData() {
+            document.getElementById('hud-coins').innerText = userData.coins;
+            saveUserData();
+        }
+    </script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Resize Canvas dynamically
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        /* Game Variables */
+        let gameState = 'START'; // 'START', 'PLAYING', 'PAUSED', 'GAMEOVER'
+        let frameCount = 0;
+        let score = 0;
+        let coinsGainedThisRun = 0;
+        let gameSpeed = 2.5;
+
+        // Environmental Themes
+        const THEMES = [
+            { name: 'Sunset', bg1: '#0f172a', bg2: '#581c87', pipe: '#06b6d4' },
+            { name: 'Night', bg1: '#020617', bg2: '#0f172a', pipe: '#10b981' },
+            { name: 'Neon Rain', bg1: '#111827', bg2: '#311042', pipe: '#ec4899' }
+        ];
+        let currentThemeIndex = 0;
+
+        // Bird Entity
+        const bird = {
+            x: 70,
+            y: 200,
+            width: 32,
+            height: 32,
+            velocity: 0,
+            gravity: 0.35,
+            jump: -6.8,
+            rotation: 0,
+            shieldActive: false,
+            shrinkTimer: 0,
+            slowMoTimer: 0,
+            magnetTimer: 0,
+
+            reset() {
+                this.y = canvas.height / 2;
+                this.velocity = 0;
+                this.rotation = 0;
+                this.shieldActive = false;
+                this.shrinkTimer = 0;
+                this.slowMoTimer = 0;
+                this.magnetTimer = 0;
+
+                // Adjust perks according to skin
+                if (userData.selectedSkin === 'phoenix') {
+                    this.gravity = 0.30;
+                } else {
+                    this.gravity = 0.35;
+                }
+            },
+
+            flap() {
+                this.velocity = this.jump;
+                audio.playJump();
+            },
+
+            update() {
+                this.velocity += this.gravity;
+                this.y += this.velocity;
+
+                // Rotation calculation
+                this.rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.velocity * 0.08)));
+
+                // Screen Boundaries
+                if (this.y < 0) this.y = 0;
+                if (this.y + this.height > canvas.height - 40) { // 40px floor height
+                    this.y = canvas.height - 40 - this.height;
+                    triggerGameOver();
+                }
+
+                // Powerup Timers
+                if (this.shrinkTimer > 0) this.shrinkTimer--;
+                if (this.slowMoTimer > 0) this.slowMoTimer--;
+                if (this.magnetTimer > 0) this.magnetTimer--;
+            },
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+                ctx.rotate(this.rotation);
+
+                // Render Active Powerup Aura
+                if (this.shieldActive) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 24, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(6, 182, 212, 0.3)';
+                    ctx.strokeStyle = '#06b6d4';
+                    ctx.lineWidth = 2;
+                    ctx.fill();
+                    ctx.stroke();
+                }
+
+                if (this.magnetTimer > 0) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 28, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Dynamic Size based on Shrink powerup or Ninja skin perk
+                let currentWidth = this.width;
+                let currentHeight = this.height;
+                if (this.shrinkTimer > 0 || userData.selectedSkin === 'ninja') {
+                    currentWidth *= 0.75;
+                    currentHeight *= 0.75;
+                }
+
+                // Draw Bird character icon
+                const activeSkin = SKINS.find(s => s.id === userData.selectedSkin) || SKINS[0];
+                ctx.font = `${currentWidth}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(activeSkin.icon, 0, 0);
+
+                ctx.restore();
+            }
+        };
+
+        // Obstacles Array (Pipes, Lasers, Portals)
+        let pipes = [];
+        let items = []; // Power-ups and Coins
+        let particles = []; // Visual particle effects
+
+        // Boss Battle Engine
+        const boss = {
+            active: false,
+            x: 0,
+            y: 0,
+            width: 70,
+            height: 70,
+            hp: 100,
+            maxHp: 100,
+            direction: 1,
+            shootTimer: 0,
+
+            spawn() {
+                this.active = true;
+                this.x = canvas.width - 90;
+                this.y = canvas.height / 3;
+                this.hp = 100;
+                this.maxHp = 100;
+                document.getElementById('boss-hud').classList.remove('opacity-0');
+            },
+
+            update() {
+                if (!this.active) return;
+
+                // Move Up & Down
+                this.y += 2 * this.direction;
+                if (this.y < 50 || this.y > canvas.height - 150) {
+                    this.direction *= -1;
+                }
+
+                // Boss shoots plasma projectiles
+                this.shootTimer++;
+                if (this.shootTimer % 90 === 0) {
+                    items.push({
+                        type: 'boss_projectile',
+                        x: this.x - 10,
+                        y: this.y + this.height / 2,
+                        radius: 8,
+                        vx: -4
+                    });
+                    audio.playLaser();
+                }
+            },
+
+            draw() {
+                if (!this.active) return;
+
+                ctx.save();
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 15;
+                ctx.font = '55px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🤖', this.x + this.width / 2, this.y + this.height / 2);
+                ctx.restore();
+            },
+
+            hit() {
+                this.hp -= 25;
+                document.getElementById('boss-hp-fill').style.width = `${(this.hp / this.maxHp) * 100}%`;
+                document.getElementById('boss-hp-text').innerText = `${Math.max(0, (this.hp / this.maxHp) * 100)}%`;
+
+                // Add Explosion Particles
+                createExplosion(this.x + 30, this.y + 30, '#ef4444');
+
+                if (this.hp <= 0) {
+                    this.active = false;
+                    document.getElementById('boss-hud').classList.add('opacity-0');
+                    userData.stats.bossesDefeated++;
+                    score += 15;
+                    audio.playPowerup();
+                    checkAchievements();
+                }
+            }
+        };
+
+        // Spawn Pipes
+        function spawnPipe() {
+            if (boss.active) return; // Don't spawn standard pipes during Boss fight!
+
+            const gap = 135;
+            const minHeight = 50;
+            const maxHeight = canvas.height - 40 - gap - minHeight;
+            const topHeight = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+            
+            // Random pipe special types
+            const randType = Math.random();
+            let isMoving = false;
+            let isLaser = false;
+
+            if (score > 10 && randType < 0.25) isMoving = true;
+            if (score > 18 && randType > 0.8) isLaser = true;
+
+            pipes.push({
+                x: canvas.width,
+                topHeight: topHeight,
+                bottomY: topHeight + gap,
+                width: 52,
+                passed: false,
+                isMoving: isMoving,
+                moveDir: 1,
+                isLaser: isLaser,
+                laserActive: true,
+                laserTimer: 0
+            });
+
+            // Random Item/Coin Spawn inside gap
+            if (Math.random() < 0.6) {
+                const itemTypes = ['coin', 'coin', 'coin', 'shield', 'shrink', 'slowmo', 'magnet'];
+                const selectedType = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+
+                items.push({
+                    type: selectedType,
+                    x: canvas.width + 20,
+                    y: topHeight + gap / 2,
+                    radius: 12,
+                    collected: false
+                });
+            }
+        }
+
+        // Create Particles Effect
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    radius: Math.random() * 4 + 2,
+                    color: color,
+                    alpha: 1
+                });
+            }
+        }
+    </script>
+
+    <script>
+        /* Main Animation Frame Loop */
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Environment Background
+            const theme = THEMES[currentThemeIndex];
+            const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGradient.addColorStop(0, theme.bg1);
+            bgGradient.addColorStop(1, theme.bg2);
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Background Stars/Particles
+            if (frameCount % 600 === 0 && gameState === 'PLAYING') {
+                currentThemeIndex = (currentThemeIndex + 1) % THEMES.length;
+            }
+
+            if (gameState === 'PLAYING') {
+                frameCount++;
+
+                // Spawn Pipes periodically
+                const currentSpeed = bird.slowMoTimer > 0 ? gameSpeed * 0.5 : gameSpeed;
+                if (frameCount % Math.floor(120 / (currentSpeed / 2.5)) === 0) {
+                    spawnPipe();
+                }
+
+                // Check for Boss Encounter
+                if (score > 0 && score % 20 === 0 && !boss.active && pipes.length === 0) {
+                    boss.spawn();
+                }
+
+                bird.update();
+                boss.update();
+            }
+
+            // 2. Render & Update Pipes
+            const currentSpeed = bird.slowMoTimer > 0 ? gameSpeed * 0.5 : gameSpeed;
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                let p = pipes[i];
+
+                if (gameState === 'PLAYING') {
+                    p.x -= currentSpeed;
+
+                    // Moving Pipe Logic
+                    if (p.isMoving) {
+                        p.topHeight += p.moveDir * 0.8;
+                        p.bottomY += p.moveDir * 0.8;
+                        if (p.topHeight < 40 || p.topHeight > canvas.height - 180) {
+                            p.moveDir *= -1;
+                        }
+                    }
+
+                    // Laser Pipe Logic
+                    if (p.isLaser) {
+                        p.laserTimer++;
+                        if (p.laserTimer % 90 === 0) p.laserActive = !p.laserActive;
+                    }
+
+                    // Check Score Passing
+                    if (!p.passed && p.x + p.width < bird.x) {
+                        p.passed = true;
+                        score++;
+                        userData.stats.pipesPassed++;
+                        document.getElementById('hud-score').innerText = score;
+                        checkAchievements();
+                    }
+
+                    // Collision Detection with Bird
+                    const birdBox = {
+                        left: bird.x + 4,
+                        right: bird.x + bird.width - 4,
+                        top: bird.y + 4,
+                        bottom: bird.y + bird.height - 4
+                    };
+
+                    // Pipe Top Collision
+                    if (birdBox.right > p.x && birdBox.left < p.x + p.width) {
+                        if (birdBox.top < p.topHeight || birdBox.bottom > p.bottomY) {
+                            handleBirdCollision();
+                        } else if (p.isLaser && p.laserActive) {
+                            handleBirdCollision();
+                        }
+                    }
+
+                    // Clean up off-screen pipes
+                    if (p.x + p.width < 0) {
+                        pipes.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                // Draw Pipe Visuals
+                ctx.fillStyle = theme.pipe;
+                ctx.shadowColor = theme.pipe;
+                ctx.shadowBlur = 8;
+
+                // Top Pipe
+                ctx.fillRect(p.x, 0, p.width, p.topHeight);
+                // Bottom Pipe
+                ctx.fillRect(p.x, p.bottomY, p.width, canvas.height - p.bottomY - 40);
+
+                // Draw Laser Beam if active
+                if (p.isLaser && p.laserActive) {
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+                    ctx.shadowColor = '#ef4444';
+                    ctx.shadowBlur = 12;
+                    ctx.fillRect(p.x + p.width / 2 - 3, p.topHeight, 6, p.bottomY - p.topHeight);
+                }
+                ctx.shadowBlur = 0;
+            }
+
+            // 3. Render & Update Items (Coins / Powerups / Boss Projectiles)
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+
+                if (gameState === 'PLAYING') {
+                    if (item.type === 'boss_projectile') {
+                        item.x += item.vx;
+                    } else {
+                        item.x -= currentSpeed;
+                    }
+
+                    // Coin Magnet Effect
+                    if (item.type === 'coin' && bird.magnetTimer > 0) {
+                        const dist = Math.hypot(bird.x - item.x, bird.y - item.y);
+                        let magnetRange = 140;
+                        if (userData.selectedSkin === 'cyber') magnetRange = 180;
+
+                        if (dist < magnetRange) {
+                            item.x += (bird.x - item.x) * 0.1;
+                            item.y += (bird.y - item.y) * 0.1;
+                        }
+                    }
+
+                    // Collision Detection with Bird
+                    const dist = Math.hypot((bird.x + bird.width / 2) - item.x, (bird.y + bird.height / 2) - item.y);
+                    if (dist < bird.width / 2 + item.radius) {
+                        // Collect Item
+                        applyPowerupOrItem(item);
+                        items.splice(i, 1);
+                        continue;
+                    }
+
+                    if (item.x < -20) {
+                        items.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                // Draw Items
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = '18px Arial';
+
+                if (item.type === 'coin') ctx.fillText('🪙', item.x, item.y);
+                else if (item.type === 'shield') ctx.fillText('🛡️', item.x, item.y);
+                else if (item.type === 'shrink') ctx.fillText('🧪', item.x, item.y);
+                else if (item.type === 'slowmo') ctx.fillText('⏱️', item.x, item.y);
+                else if (item.type === 'magnet') ctx.fillText('🧲', item.x, item.y);
+                else if (item.type === 'boss_projectile') {
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            // 4. Draw Ground Floor
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 40);
+            ctx.lineTo(canvas.width, canvas.height - 40);
+            ctx.stroke();
+
+            // 5. Draw Boss and Bird
+            boss.draw();
+            bird.draw();
+
+            // 6. Draw Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let pt = particles[i];
+                if (gameState === 'PLAYING') {
+                    pt.x += pt.vx;
+                    pt.y += pt.vy;
+                    pt.alpha -= 0.03;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, pt.alpha);
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                if (pt.alpha <= 0) particles.splice(i, 1);
+            }
+
+            // Update Power-up HUD UI
+            renderPowerupHUD();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* Powerup Application Logic */
+        function applyPowerupOrItem(item) {
+            if (item.type === 'coin') {
+                let multiplier = (userData.selectedSkin === 'golden') ? 2 : 1;
+                let gained = 1 * multiplier;
+                userData.coins += gained;
+                coinsGainedThisRun += gained;
+                userData.stats.totalCoins += gained;
+                audio.playCoin();
+                updateHUDData();
+            } else if (item.type === 'shield') {
+                bird.shieldActive = true;
+                audio.playPowerup();
+            } else if (item.type === 'shrink') {
+                bird.shrinkTimer = 300; // ~5 seconds
+                audio.playPowerup();
+            } else if (item.type === 'slowmo') {
+                bird.slowMoTimer = 300;
+                audio.playPowerup();
+            } else if (item.type === 'magnet') {
+                bird.magnetTimer = 360;
+                audio.playPowerup();
+            } else if (item.type === 'boss_projectile') {
+                handleBirdCollision();
+            }
+            checkAchievements();
+        }
+
+        /* Collision Handling */
+        function handleBirdCollision() {
+            if (bird.shieldActive) {
+                bird.shieldActive = false;
+                audio.playHit();
+                createExplosion(bird.x, bird.y, '#06b6d4');
+                return;
+            }
+            audio.playHit();
+            createExplosion(bird.x, bird.y, '#ef4444');
+            triggerGameOver();
+        }
+
+        /* Power-up Active Badges UI */
+        function renderPowerupHUD() {
+            const container = document.getElementById('powerup-bar');
+            container.innerHTML = '';
+
+            if (bird.shieldActive) {
+                container.innerHTML += `<div class="px-2 py-1 bg-cyan-950/80 border border-cyan-400 text-cyan-300 font-pixel text-[9px] rounded-md shadow-lg flex items-center gap-1"><i class="fa-solid fa-shield-halved"></i> SHIELD</div>`;
+            }
+            if (bird.shrinkTimer > 0) {
+                container.innerHTML += `<div class="px-2 py-1 bg-purple-950/80 border border-purple-400 text-purple-300 font-pixel text-[9px] rounded-md shadow-lg flex items-center gap-1"><i class="fa-solid fa-compress"></i> MINI</div>`;
+            }
+            if (bird.slowMoTimer > 0) {
+                container.innerHTML += `<div class="px-2 py-1 bg-amber-950/80 border border-amber-400 text-amber-300 font-pixel text-[9px] rounded-md shadow-lg flex items-center gap-1"><i class="fa-solid fa-clock"></i> SLOW-MO</div>`;
+            }
+            if (bird.magnetTimer > 0) {
+                container.innerHTML += `<div class="px-2 py-1 bg-pink-950/80 border border-pink-400 text-pink-300 font-pixel text-[9px] rounded-md shadow-lg flex items-center gap-1"><i class="fa-solid fa-magnet"></i> MAGNET</div>`;
+            }
+        }
+
+        /* Start / Restart / Game Over State Controllers */
+        function startGame() {
+            audio.init();
+            gameState = 'PLAYING';
+            score = 0;
+            coinsGainedThisRun = 0;
+            pipes = [];
+            items = [];
+            particles = [];
+            boss.active = false;
+            bird.reset();
+
+            userData.stats.gamesPlayed++;
+            saveUserData();
+
+            document.getElementById('hud-score').innerText = '0';
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-gameover').classList.add('hidden');
+            document.getElementById('boss-hud').classList.add('opacity-0');
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            if (score > userData.highScore) {
+                userData.highScore = score;
+            }
+            saveUserData();
+
+            document.getElementById('go-score').innerText = score;
+            document.getElementById('go-high-score').innerText = userData.highScore;
+            document.getElementById('go-coins').innerText = `+${coinsGainedThisRun}`;
+            document.getElementById('screen-gameover').classList.remove('hidden');
+        }
+
+        /* Check & Unlock Achievements */
+        function checkAchievements() {
+            ACHIEVEMENTS.forEach(ach => {
+                if (userData.unlockedAchievements.includes(ach.id)) return;
+
+                let unlocked = false;
+                if (ach.type === 'coins' && userData.stats.totalCoins >= ach.target) unlocked = true;
+                else if (ach.type === 'boss' && userData.stats.bossesDefeated >= ach.target) unlocked = true;
+                else if (!ach.type && score >= ach.target) unlocked = true;
+
+                if (unlocked) {
+                    userData.unlockedAchievements.push(ach.id);
+                    saveUserData();
+                }
+            });
+        }
+    </script>
+
+    <script>
+        /* Event Listeners for Game Interaction */
+        function handleJump() {
+            if (gameState === 'PLAYING') {
+                bird.flap();
+                if (boss.active) {
+                    boss.hit();
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                handleJump();
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            handleJump();
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleJump();
+        });
+
+        // Top Header Control Buttons
+        document.getElementById('btn-play').addEventListener('click', startGame);
+        document.getElementById('btn-restart').addEventListener('click', startGame);
+        document.getElementById('btn-home').addEventListener('click', () => {
+            gameState = 'START';
+            document.getElementById('screen-gameover').classList.add('hidden');
+            document.getElementById('screen-start').classList.remove('hidden');
+        });
+
+        document.getElementById('btn-pause').addEventListener('click', () => {
+            if (gameState === 'PLAYING') gameState = 'PAUSED';
+            else if (gameState === 'PAUSED') gameState = 'PLAYING';
+        });
+
+        document.getElementById('btn-sound').addEventListener('click', () => {
+            audio.muted = !audio.muted;
+            const icon = document.querySelector('#btn-sound i');
+            icon.className = audio.muted ? 'fa-solid fa-volume-xmark text-sm sm:text-base' : 'fa-solid fa-volume-high text-sm sm:text-base';
+        });
+
+        /* Modals Management */
+        // Shop Modal Render
+        function renderShop() {
+            const listContainer = document.getElementById('shop-skins-list');
+            listContainer.innerHTML = '';
+
+            SKINS.forEach(skin => {
+                const isUnlocked = userData.unlockedSkins.includes(skin.id);
+                const isSelected = userData.selectedSkin === skin.id;
+
+                const itemHtml = `
+                    <div class="bg-slate-900 border ${isSelected ? 'border-cyan-400' : 'border-slate-800'} rounded-xl p-3 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="text-3xl">${skin.icon}</div>
+                            <div>
+                                <div class="font-pixel text-xs text-slate-200">${skin.name}</div>
+                                <div class="text-[11px] text-slate-400">${skin.perk}</div>
+                            </div>
+                        </div>
+                        <div>
+                            ${isSelected ? `
+                                <span class="px-3 py-1 bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 font-pixel text-[9px] rounded-lg">SELECTED</span>
+                            ` : isUnlocked ? `
+                                <button onclick="selectSkin('${skin.id}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-pixel text-[9px] rounded-lg transition">EQUIP</button>
+                            ` : `
+                                <button onclick="buySkin('${skin.id}', ${skin.cost})" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-pixel text-[9px] rounded-lg hover:brightness-110 transition flex items-center gap-1">
+                                    <i class="fa-solid fa-coins"></i> ${skin.cost}
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+                listContainer.innerHTML += itemHtml;
+            });
+        }
+
+        function selectSkin(id) {
+            userData.selectedSkin = id;
+            saveUserData();
+            updateSelectedSkinUI();
+            renderShop();
+        }
+
+        function buySkin(id, cost) {
+            if (userData.coins >= cost) {
+                userData.coins -= cost;
+                userData.unlockedSkins.push(id);
+                userData.selectedSkin = id;
+                saveUserData();
+                updateHUDData();
+                updateSelectedSkinUI();
+                renderShop();
+            }
+        }
+
+        function updateSelectedSkinUI() {
+            const active = SKINS.find(s => s.id === userData.selectedSkin) || SKINS[0];
+            document.getElementById('selected-skin-preview').innerText = active.icon;
+            document.getElementById('selected-skin-name').innerText = active.name;
+            document.getElementById('selected-skin-perk').innerText = active.perk;
+        }
+
+        // Achievements Modal Render
+        function renderAchievements() {
+            const container = document.getElementById('achievements-list');
+            container.innerHTML = '';
+
+            ACHIEVEMENTS.forEach(ach => {
+                const isUnlocked = userData.unlockedAchievements.includes(ach.id);
+
+                container.innerHTML += `
+                    <div class="bg-slate-900 border ${isUnlocked ? 'border-amber-500/50' : 'border-slate-800'} rounded-xl p-3 flex items-center space-x-3 opacity-${isUnlocked ? '100' : '60'}">
+                        <div class="text-3xl">${ach.icon}</div>
+                        <div class="flex-1">
+                            <div class="font-pixel text-xs ${isUnlocked ? 'text-amber-300' : 'text-slate-400'}">${ach.name}</div>
+                            <div class="text-[11px] text-slate-400">${ach.desc}</div>
+                        </div>
+                        <div>
+                            ${isUnlocked ? '<i class="fa-solid fa-circle-check text-amber-400 text-lg"></i>' : '<i class="fa-solid fa-lock text-slate-600 text-lg"></i>'}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Modal Listeners
+        document.getElementById('btn-open-shop').addEventListener('click', () => {
+            renderShop();
+            document.getElementById('modal-shop').classList.remove('hidden');
+        });
+        document.getElementById('btn-close-shop').addEventListener('click', () => {
+            document.getElementById('modal-shop').classList.add('hidden');
+        });
+
+        document.getElementById('btn-open-achievements').addEventListener('click', () => {
+            renderAchievements();
+            document.getElementById('modal-achievements').classList.remove('hidden');
+        });
+        document.getElementById('btn-close-achievements').addEventListener('click', () => {
+            document.getElementById('modal-achievements').classList.add('hidden');
+        });
+
+        document.getElementById('btn-open-stats').addEventListener('click', () => {
+            document.getElementById('stat-highscore').innerText = userData.highScore;
+            document.getElementById('stat-games').innerText = userData.stats.gamesPlayed;
+            document.getElementById('stat-pipes').innerText = userData.stats.pipesPassed;
+            document.getElementById('stat-coins').innerText = userData.stats.totalCoins;
+            document.getElementById('stat-bosses').innerText = userData.stats.bossesDefeated;
+            document.getElementById('modal-stats').classList.remove('hidden');
+        });
+        document.getElementById('btn-close-stats').addEventListener('click', () => {
+            document.getElementById('modal-stats').classList.add('hidden');
+        });
+
+        // Initialize application state
+        loadUserData();
+        updateSelectedSkinUI();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
